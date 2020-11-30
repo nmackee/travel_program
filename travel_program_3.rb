@@ -15,50 +15,90 @@ end
 class Travel_agency
   attr_reader :travel_plan
 
+  DATE_CHECK_NUM = 1
+
   def initialize(travel_plan_params)
-    @travel_plan = []
-    travel_plan_params.each do |param|
-      @travel_plan << Travel_plan.new(param)
-    end
+    @travel_plan = travel_plan_params.map {|param| Travel_plan.new(param)}
   end
 
   def disp_plan
     puts "旅行プランを洗濯してください"
 
     @travel_plan.each do |param, id|
-      puts "#{param.id}.#{param.name}(¥#{param.price.to_s.gsub(/(\d)(?=\d{3}+$)/, '\\1,')}円)"
+      puts "#{param.id}.#{param.name}(¥#{param.price.number_with_separator}円)"
+    end
+  end
+  
+  def calculate_charges(chosen_plan, num_of_people, today, departure_day)
+    @total_price = chosen_plan.price * num_of_people
+    
+     date_check(today)
+     num_of_people_check(num_of_people)
+     departure_day_check(departure_day, today)
+    
+    puts "合計金額: ¥#{@total_price.floor.number_with_separator}円"
+
+  end
+
+  def date_check(today)
+    
+    # 今日の日付が5のつく日か調べる
+    if date_check = today.day.digits[0].to_s.include?(DATE_CHECK_NUM.to_s)
+    
+      puts "今日は#{today.strftime("%Y年%m月%d日")}です。#{DATE_CHECK_NUM}がつく日は10%割引となります。"
+      @total_price *= 0.9
     end
   
   end
 
-  def calculate_charges(chosen_plan, number_of_people)
-    @total_price = chosen_plan.price * number_of_people
+  def departure_day_check(departure_day, today)
+    puts "出発日は#{departure_day.strftime("%Y年%m月%d日")}ですね"
+
+    after_day = today.next_day(14)
+
+    # 出発日が今日から14日後かどうかの処理
+    if departure_day >= after_day
+      @total_price *= 0.9
+      puts "14日前までの予約は10%割引となります。"
+    end
     
-    date_check
-    departure_day_check
-    
-    if number_of_people >= 5
+  end
+
+  def num_of_people_check(num_of_people)
+    if num_of_people >= 5
       puts "5人以上なので10%割引となります"
       @total_price *= 0.9
     end
-    puts "合計金額: ¥#{@total_price.floor.to_s.gsub(/(\d)(?=\d{3}+$)/, '\\1,')}円"
-
   end
 
-  def date_check
-    @today = Date.today
-    
-    # 今日の日付が5のつく日か調べる
-    if date_check = @today.to_s.include?("5")
-      puts "今日は#{@today.strftime("%Y年%m月%d日")}です。5がつく日は10%割引となります。"
-      @total_price *= 0.9
+end
+
+class User
+  attr_reader :chosen_plan, :num_of_people, :departure_day, :today
+
+  def select_plan(travel_plan)
+    while true do
+      print "プランを選択 > "
+      select_plan = gets.to_i
+      @chosen_plan = travel_plan.find { |plan| plan.id == select_plan}
+      
+      break if (travel_plan.first.id..travel_plan.last.id) === select_plan
+      puts "#{travel_plan.first.id}から#{travel_plan.last.id}の中から選んでください。"
     end
-    #puts "合計金額: ¥#{@total_price.floor.to_s.gsub(/(\d)(?=\d{3}+$)/, '\\1,')}円"
-    @total_price
-
   end
 
-  def departure_day_check
+  def num_of_people_input
+    puts "#{@chosen_plan.name}ですね、何人で行きますか?"
+
+    while true do
+      print "人数を入力 > "
+      @num_of_people = gets.to_i
+      break if @num_of_people >= 1
+      puts "１人以上を入力してください"
+    end
+  end
+
+  def departure_day_input
     puts "出発日を入力して下さい"
 
     while true do
@@ -71,58 +111,23 @@ class Travel_agency
 
       begin
         # 入力された出発日が有効か調べる
-        departure_day = Date.parse("#{date_y}/#{date_m}/#{date_d}")
-        break if departure_day > @today
+        @departure_day = Date.parse("#{date_y}/#{date_m}/#{date_d}")
+        @today = Date.today
+        break if @departure_day > today
         puts "明日以降の日付を入力してください"
       rescue
         puts "無効な日付です"
       end
-      
     end
-
-    puts "#{departure_day.strftime("%Y年%m月%d日")}ですね"
-
-    after_day = @today.next_day(14)
-
-    # 出発日が今日から14日後かどうかの処理
-    if after_day <= departure_day
-      @total_price *= 0.9
-      puts "14日前までの予約は10%割引です"
-    end
-    #puts "合計金額: ¥#{@total_price.floor.to_s.gsub(/(\d)(?=\d{3}+$)/, '\\1,')}円"
-
-    @total_price
   end
+
 end
 
-class User
-  attr_reader :chosen_plan, :number_of_people
-  
-  def select_plan(travel_plan)
-    while true do
-      print "プランを選択 > "
-      select_plan = gets.to_i
-      @chosen_plan = travel_plan.find { |plan| plan.id == select_plan}
-      
-      break if (travel_plan.first.id..travel_plan.last.id) === select_plan
-      puts "#{travel_plan.first.id}から#{travel_plan.last.id}の中から選んでください。"
-    end
-
-    travel_plan[select_plan - 1] 
+class Integer
+  # 数字に3桁区切りのカンマを入れる
+  def number_with_separator
+    return self.to_s.gsub(/(\d)(?=\d{3}+$)/, '\\1,')
   end
-
-  def how_many
-    puts "#{@chosen_plan.name}ですね、何人で行きますか?"
-
-    while true do
-      print "人数を入力 > "
-      @number_of_people = gets.to_i
-      break if @number_of_people >= 1
-      puts "１人以上を入力してください"
-    end
-    @number_of_people
-  end
-
 end
 
 travel_plan_params = [
@@ -133,7 +138,10 @@ travel_plan_params = [
 
 travel_agency = Travel_agency.new(travel_plan_params)
 travel_agency.disp_plan
+
 user = User.new
 user.select_plan(travel_agency.travel_plan)
-user.how_many
-travel_agency.calculate_charges(user.chosen_plan, user.number_of_people)
+user.num_of_people_input
+user.departure_day_input
+
+travel_agency.calculate_charges(user.chosen_plan, user.num_of_people, user.today, user.departure_day)
