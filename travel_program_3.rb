@@ -13,28 +13,28 @@ class Travel_plan
 end
 
 class Travel_agency
-  attr_reader :travel_plan
+  attr_reader :travel_plans
 
-  DATE_CHECK_NUM = 1
+  DATE_CHECK_NUM = 3
 
   def initialize(travel_plan_params)
-    @travel_plan = travel_plan_params.map {|param| Travel_plan.new(param)}
+    @travel_plans = travel_plan_params.map {|param| Travel_plan.new(param)}
   end
 
   def disp_plan
-    puts "旅行プランを洗濯してください"
+    puts "旅行プランを選択してください"
 
-    @travel_plan.each do |param, id|
+    @travel_plans.each do |param|
       puts "#{param.id}.#{param.name}(¥#{param.price.number_with_separator}円)"
     end
   end
   
-  def calculate_charges(chosen_plan, num_of_people, today, departure_day)
-    @total_price = chosen_plan.price * num_of_people
-    
-     date_check(today)
-     num_of_people_check(num_of_people)
-     departure_day_check(departure_day, today)
+  def calculate_charges(user)
+    @total_price = user.chosen_plan.price * user.num_of_people
+
+     date_check(user.today)
+     num_of_people_check(user.num_of_people)
+     departure_day_check(user.departure_day, user.today)
     
     puts "合計金額: ¥#{@total_price.floor.number_with_separator}円"
 
@@ -76,14 +76,14 @@ end
 class User
   attr_reader :chosen_plan, :num_of_people, :departure_day, :today
 
-  def select_plan(travel_plan)
+  def select_plan(travel_plans)
     while true do
       print "プランを選択 > "
       select_plan = gets.to_i
-      @chosen_plan = travel_plan.find { |plan| plan.id == select_plan}
+      @chosen_plan = travel_plans.find { |plan| plan.id == select_plan}
       
-      break if (travel_plan.first.id..travel_plan.last.id) === select_plan
-      puts "#{travel_plan.first.id}から#{travel_plan.last.id}の中から選んでください。"
+      break if (travel_plans.first.id..travel_plans.last.id) === select_plan
+      puts "#{travel_plans.first.id}から#{travel_plans.last.id}の中から選んでください。"
     end
   end
 
@@ -140,8 +140,8 @@ travel_agency = Travel_agency.new(travel_plan_params)
 travel_agency.disp_plan
 
 user = User.new
-user.select_plan(travel_agency.travel_plan)
+user.select_plan(travel_agency.travel_plans)
 user.num_of_people_input
 user.departure_day_input
 
-travel_agency.calculate_charges(user.chosen_plan, user.num_of_people, user.today, user.departure_day)
+travel_agency.calculate_charges(user)
